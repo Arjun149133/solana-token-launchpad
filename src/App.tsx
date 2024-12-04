@@ -12,8 +12,6 @@ import TokenLaunchpad from "./components/TokenLaunchpad";
 
 const SOLANA_DEVNET_RPC_URL = import.meta.env.VITE_SOLANA_DEVNET_RPC_URL;
 
-console.log("here", SOLANA_DEVNET_RPC_URL);
-
 function App() {
   return (
     <div>

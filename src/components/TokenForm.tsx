@@ -1,24 +1,154 @@
-import { Label } from "@radix-ui/react-label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import React, { useState } from "react";
+import { Label } from "./ui/label";
+import ImageUpload from "./ImageUpload";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
+import {
+  createAssociatedTokenAccountInstruction,
+  createInitializeMetadataPointerInstruction,
+  createInitializeMint2Instruction,
+  createInitializeMintInstruction,
+  createMintToInstruction,
+  ExtensionType,
+  getAssociatedTokenAddressSync,
+  getMinimumBalanceForRentExemptMint,
+  getMintLen,
+  LENGTH_SIZE,
+  TOKEN_2022_PROGRAM_ID,
+  TYPE_SIZE,
+} from "@solana/spl-token";
+import { createInitializeInstruction, pack } from "@solana/spl-token-metadata";
 
-type FormData = {
+export type FormData = {
   name: string;
   symbol: string;
-  image_url: string;
   initial_supply: number;
+  decimal: number;
+  description: string;
 };
 
 const TokenForm = () => {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     symbol: "",
-    image_url: "",
     initial_supply: 0,
+    decimal: 9,
+    description: "",
   });
+  const [image, setImage] = useState<string | ArrayBuffer | null>(null);
 
-  const createToken = () => {};
+  const { connection } = useConnection();
+  const wallet = useWallet();
+
+  async function createToken(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (!wallet.publicKey) return;
+
+    try {
+      const mintKeypair = Keypair.generate();
+      const metadata = {
+        mint: mintKeypair.publicKey,
+        name: formData.name,
+        symbol: formData.symbol,
+        uri: "https://cdn.100xdevs.com/metadata.json",
+        additionalMetadata: [],
+      };
+
+      const mintLen = getMintLen([ExtensionType.MetadataPointer]);
+      const metadataLen = TYPE_SIZE + LENGTH_SIZE + pack(metadata).length;
+
+      const lamports = await connection.getMinimumBalanceForRentExemption(
+        mintLen + metadataLen
+      );
+
+      const transaction = new Transaction().add(
+        SystemProgram.createAccount({
+          fromPubkey: wallet.publicKey,
+          newAccountPubkey: mintKeypair.publicKey,
+          space: mintLen,
+          lamports,
+          programId: TOKEN_2022_PROGRAM_ID,
+        }),
+        createInitializeMetadataPointerInstruction(
+          mintKeypair.publicKey,
+          wallet.publicKey,
+          mintKeypair.publicKey,
+          TOKEN_2022_PROGRAM_ID
+        ),
+        createInitializeMintInstruction(
+          mintKeypair.publicKey,
+          9,
+          wallet.publicKey,
+          null,
+          TOKEN_2022_PROGRAM_ID
+        ),
+        createInitializeInstruction({
+          programId: TOKEN_2022_PROGRAM_ID,
+          mint: mintKeypair.publicKey,
+          metadata: mintKeypair.publicKey,
+          name: metadata.name,
+          symbol: metadata.symbol,
+          uri: metadata.uri,
+          mintAuthority: wallet.publicKey,
+          updateAuthority: wallet.publicKey,
+        })
+      );
+
+      transaction.feePayer = wallet.publicKey;
+      transaction.recentBlockhash = (
+        await connection.getLatestBlockhash()
+      ).blockhash;
+      transaction.partialSign(mintKeypair);
+
+      await wallet.sendTransaction(transaction, connection);
+      console.log(`Token mint created at ${mintKeypair.publicKey.toBase58()}`);
+
+      const ata = getAssociatedTokenAddressSync(
+        mintKeypair.publicKey,
+        wallet.publicKey,
+        false,
+        TOKEN_2022_PROGRAM_ID
+      );
+
+      console.log(ata.toBase58());
+
+      const transaction2 = new Transaction().add(
+        createAssociatedTokenAccountInstruction(
+          wallet.publicKey,
+          ata,
+          wallet.publicKey,
+          mintKeypair.publicKey,
+          TOKEN_2022_PROGRAM_ID
+        )
+      );
+
+      await wallet.sendTransaction(transaction2, connection);
+
+      const transaction3 = new Transaction().add(
+        createMintToInstruction(
+          mintKeypair.publicKey,
+          ata,
+          wallet.publicKey,
+          10000000000,
+          [],
+          TOKEN_2022_PROGRAM_ID
+        )
+      );
+
+      await wallet.sendTransaction(transaction3, connection);
+
+      console.log("Minted!");
+    } catch (error) {
+      console.log("error: ", error);
+    }
+  }
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -28,7 +158,7 @@ const TokenForm = () => {
   };
 
   return (
-    <form className=" w-1/3 space-y-2">
+    <form className=" grid grid-cols-2 gap-5 w-full ">
       <div>
         <Label>Name</Label>
         <Input
@@ -48,12 +178,12 @@ const TokenForm = () => {
         />
       </div>
       <div>
-        <Label>Image</Label>
+        <Label>Decimal</Label>
         <Input
-          placeholder="Image URL"
-          value={formData.image_url}
+          placeholder="Decimal"
+          value={formData.decimal}
           onChange={onInputChange}
-          name="image_url"
+          name="decimal"
         />
       </div>
       <div>
@@ -65,7 +195,21 @@ const TokenForm = () => {
           name="initial_supply"
         />
       </div>
-      <div className=" flex justify-center p-2">
+      <div>
+        <Label>Image</Label>
+        <ImageUpload image={image} setImage={setImage} />
+      </div>
+      <div>
+        <Label>Description</Label>
+        <Input
+          className=""
+          value={formData.description}
+          placeholder="Description"
+          onChange={onInputChange}
+          name="description"
+        />
+      </div>
+      <div className=" flex col-span-2 justify-center p-2">
         <Button variant="secondary" onClick={createToken}>
           Create a Token
         </Button>
