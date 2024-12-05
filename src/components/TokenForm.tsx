@@ -4,21 +4,14 @@ import React, { useState } from "react";
 import { Label } from "./ui/label";
 import ImageUpload from "./ImageUpload";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-} from "@solana/web3.js";
+import { Keypair, SystemProgram, Transaction } from "@solana/web3.js";
 import {
   createAssociatedTokenAccountInstruction,
   createInitializeMetadataPointerInstruction,
-  createInitializeMint2Instruction,
   createInitializeMintInstruction,
   createMintToInstruction,
   ExtensionType,
   getAssociatedTokenAddressSync,
-  getMinimumBalanceForRentExemptMint,
   getMintLen,
   LENGTH_SIZE,
   TOKEN_2022_PROGRAM_ID,
