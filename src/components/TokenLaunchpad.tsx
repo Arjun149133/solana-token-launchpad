@@ -1,4 +1,5 @@
-import TokenForm from "./TokenForm";
+import Temp from "./Temp";
+// import TokenForm from "./TokenForm";
 
 const TokenLaunchpad = () => {
   return (
@@ -7,7 +8,8 @@ const TokenLaunchpad = () => {
         Token Launchpad
       </h1>
       <div className=" flex flex-col justify-center items-center">
-        <TokenForm />
+        {/* <TokenForm /> */}
+        <Temp />
       </div>
     </div>
   );

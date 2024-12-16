@@ -77,7 +77,7 @@ const TokenForm = () => {
         ),
         createInitializeMintInstruction(
           mintKeypair.publicKey,
-          9,
+          formData.decimal,
           wallet.publicKey,
           null,
           TOKEN_2022_PROGRAM_ID
@@ -129,7 +129,7 @@ const TokenForm = () => {
           mintKeypair.publicKey,
           ata,
           wallet.publicKey,
-          10000000000,
+          formData.initial_supply * Math.pow(10, formData.decimal),
           [],
           TOKEN_2022_PROGRAM_ID
         )

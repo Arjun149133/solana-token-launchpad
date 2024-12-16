@@ -22,7 +22,7 @@ const ImageUpload = ({ image, setImage }: { image: any; setImage: any }) => {
           <img
             src={image as string}
             alt="Preview"
-            className=" w-fit h-fit bg-cover"
+            className=" w-72 h-48 bg-cover"
           />
         </div>
       )}
